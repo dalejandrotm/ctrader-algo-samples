@@ -1,0 +1,71 @@
+using cAlgo.API;
+using cAlgo.API.Indicators;
+
+namespace cAlgo.Indicators
+{
+    [Indicator(AccessRights = AccessRights.None)]
+    public class CruceSMACruz : Indicator
+    {
+        // Parámetros de las EMA
+        [Parameter("Periodo EMA Rápid", DefaultValue =8 )]
+        public int FastSmaPeriod { get; set; }
+
+        [Parameter("Periodo SMA Lenta", DefaultValue = 12)]
+        public int SlowSmaPeriod { get; set; }
+
+        // Instancias de las SMA
+        private SimpleMovingAverage _fastSma;
+        private SimpleMovingAverage _slowSma;
+
+        // Output para la visualización (no necesario para la cruz, pero útil para depurar)
+        // [Output("Fast SMA", PlotType = PlotType.Line, Color = Colors.Blue)]
+        // public IndicatorDataSeries FastSmaOutput { get; set; }
+
+        // [Output("Slow SMA", PlotType = PlotType.Line, Color = Colors.Red)]
+        // public IndicatorDataSeries SlowSmaOutput { get; set; }
+
+        protected override void Initialize()
+        {
+            // Inicializar las instancias de las SMA
+            _fastSma = Indicators.SimpleMovingAverage(Bars.ClosePrices, FastSmaPeriod);
+            _slowSma = Indicators.SimpleMovingAverage(Bars.ClosePrices, SlowSmaPeriod);
+        }
+
+        public override void Calculate(int index)
+        {
+            // Asegurarse de que tenemos suficientes barras para calcular ambas SMAs
+            if (index < Math.Max(FastSmaPeriod, SlowSmaPeriod))
+            {
+                return;
+            }
+
+            // Obtener los valores actuales de las SMAs
+            double fastSmaCurrent = _fastSma.Result[index];
+            double slowSmaCurrent = _slowSma.Result[index];
+
+            // Obtener los valores anteriores de las SMAs (para detectar el cruce)
+            double fastSmaPrevious = _fastSma.Result[index - 1];
+            double slowSmaPrevious = _slowSma.Result[index - 1];
+
+            // Detectar cruce ascendente (Fast SMA cruza por encima de Slow SMA)
+            if (fastSmaCurrent > slowSmaCurrent && fastSmaPrevious <= slowSmaPrevious)
+            {
+                ChartObjects.DrawIcon("CruceAlcista" + index, ChartIconType.UpArrow, Bars.OpenTimes[index], Bars.LowPrices[index] - Symbol.PipSize * 10, Colors.Green);
+                // O si prefieres una cruz:
+                ChartObjects.DrawText("CruceAlcista" + index, "X", Bars.OpenTimes[index], Bars.LowPrices[index] - Symbol.PipSize * 10, Colors.Green);
+            }
+
+            // Detectar cruce descendente (Fast SMA cruza por debajo de Slow SMA)
+            else if (fastSmaCurrent < slowSmaCurrent && fastSmaPrevious >= slowSmaPrevious)
+            {
+                ChartObjects.DrawIcon("CruceBajista" + index, ChartIconType.DownArrow, Bars.OpenTimes[index], Bars.HighPrices[index] + Symbol.PipSize * 10, Colors.Red);
+                // O si prefieres una cruz:
+                ChartObjects.DrawText("CruceBajista" + index, "X", Bars.OpenTimes[index], Bars.HighPrices[index] + Symbol.PipSize * 10, Colors.Red);
+            }
+
+            // Si deseas mostrar las líneas de SMA también (descomenta las líneas de Output arriba)
+            // FastSmaOutput[index] = fastSmaCurrent;
+            // SlowSmaOutput[index] = slowSmaCurrent;
+        }
+    }
+}
